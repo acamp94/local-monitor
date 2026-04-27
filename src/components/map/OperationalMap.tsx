@@ -50,12 +50,17 @@ function LocationMarker({ lat, lon }: { lat: number; lon: number }) {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const icon = L.divIcon({
       className: '',
-      html: `<div style="position:relative;width:24px;height:24px;">
-        <div style="position:absolute;inset:0;border-radius:50%;background:rgba(0,200,255,0.1);border:2px solid #00c8ff;${reducedMotion ? '' : 'animation:pulse-ring 2s ease-out infinite;'}"></div>
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:#00c8ff;box-shadow:0 0 8px #00c8ff;"></div>
+      html: `<div style="position:relative;width:40px;height:40px;">
+        <div style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(0,200,255,0.55);${reducedMotion ? '' : 'animation:pulse-ring 2.2s ease-out infinite;'}"></div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;border:1.5px solid #00c8ff;opacity:0.9;"></div>
+        <div style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:1.5px;height:7px;background:#00c8ff;opacity:0.7;"></div>
+        <div style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:1.5px;height:7px;background:#00c8ff;opacity:0.7;"></div>
+        <div style="position:absolute;top:50%;left:2px;transform:translateY(-50%);width:7px;height:1.5px;background:#00c8ff;opacity:0.7;"></div>
+        <div style="position:absolute;top:50%;right:2px;transform:translateY(-50%);width:7px;height:1.5px;background:#00c8ff;opacity:0.7;"></div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:4px;height:4px;border-radius:50%;background:#00c8ff;box-shadow:0 0 6px #00c8ff;"></div>
       </div>`,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
     })
     const marker = L.marker([lat, lon], { icon, interactive: false }).addTo(map)
     return () => { map.removeLayer(marker) }
@@ -73,16 +78,16 @@ function ReportMarkers({ reports }: { reports: LocalReport[] }) {
       const icon = L.divIcon({
         className: '',
         html: `<div style="
-          width:22px;height:22px;
+          width:32px;height:32px;
           border-radius:50% 50% 50% 0;
           transform:rotate(-45deg);
           background:rgba(34,197,94,0.9);
-          border:2px solid ${color};
-          box-shadow:0 2px 8px rgba(0,0,0,0.5);
+          border:3px solid ${color};
+          box-shadow:0 2px 8px rgba(0,0,0,0.5),0 0 8px rgba(34,197,94,0.5);
           display:flex;align-items:center;justify-content:center;
-        "><span style="transform:rotate(45deg);color:#0c1524;font-size:10px;font-weight:bold;">!</span></div>`,
-        iconSize: [22, 22],
-        iconAnchor: [11, 22],
+        "><span style="transform:rotate(45deg);color:#0c1524;font-size:12px;font-weight:bold;">!</span></div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
       })
       const popup = L.popup({ className: '', closeButton: false }).setContent(`
         <div style="font-family:monospace;font-size:11px;min-width:160px;">
@@ -113,9 +118,10 @@ function AlertGeometryLayers({ alerts }: { alerts: NWSAlert[] }) {
         style: {
           color,
           fillColor: color,
-          fillOpacity: 0.08,
-          weight: 1.5,
-          dashArray: '4 4',
+          fillOpacity: 0.18,
+          weight: 2.5,
+          dashArray: '8 4',
+          opacity: 0.95,
         },
       }).bindPopup(`
         <div style="font-family:monospace;font-size:11px;min-width:160px;">

@@ -173,7 +173,7 @@ export default function App() {
             {/* Center column: map (flex-1) + incident list (fixed height) */}
             <div className="flex flex-col flex-1 gap-2 overflow-hidden min-w-0 min-h-0">
               {/* Operational map */}
-              <div className="flex-1 relative overflow-hidden corner-bracket min-h-[260px] lg:min-h-0">
+              <div className="flex-1 relative overflow-hidden corner-bracket min-h-[45vh] lg:min-h-0">
                 <OperationalMap
                   location={geocoding.location}
                   alerts={alerts.alerts}
