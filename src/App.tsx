@@ -57,6 +57,7 @@ export default function App() {
     geocoding,
     weather,
     alerts,
+    earthquakes,
     localData,
     riskIndex,
     incidentItems,
@@ -70,10 +71,15 @@ export default function App() {
   useEffect(() => { if (geocoding.error) setDismissedErrors(p => { const n = new Set(p); n.delete('geo'); return n }) }, [geocoding.error])
   useEffect(() => { if (weather.error) setDismissedErrors(p => { const n = new Set(p); n.delete('weather'); return n }) }, [weather.error])
   useEffect(() => { if (alerts.error) setDismissedErrors(p => { const n = new Set(p); n.delete('alerts'); return n }) }, [alerts.error])
+  useEffect(() => { if (earthquakes.error) setDismissedErrors(p => { const n = new Set(p); n.delete('earthquakes'); return n }) }, [earthquakes.error])
 
-  const hasApiError = Boolean(geocoding.error || weather.error || alerts.error)
+  const hasApiError = Boolean(geocoding.error || weather.error || alerts.error || earthquakes.error)
   const hasLiveWeather = weather.status === 'success' && Boolean(weather.data)
   const hasLiveAlerts = alerts.status === 'success'
+  const hasLiveEarthquakes = earthquakes.status === 'success'
+  const lastExternalSync = [weather.fetchedAt, alerts.fetchedAt, earthquakes.fetchedAt]
+    .filter((date): date is Date => date instanceof Date)
+    .sort((a, b) => b.getTime() - a.getTime())[0] ?? null
   const windSeverity = weather.data
     ? weather.data.current.wind_speed_10m >= 50
       ? 'HIGH'
@@ -86,7 +92,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen w-full max-w-full overflow-hidden bg-page">
-      <TopStatusBar threatLevel={riskIndex.overallSeverity} lastSync={weather.fetchedAt} />
+      <TopStatusBar threatLevel={riskIndex.overallSeverity} lastSync={lastExternalSync} />
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         <LeftNav activeSection={activeSection} onNavigate={setActiveSection} />
@@ -101,6 +107,7 @@ export default function App() {
             hasError={hasApiError}
             weatherReady={hasLiveWeather}
             alertsReady={hasLiveAlerts}
+            earthquakesReady={hasLiveEarthquakes}
           />
 
           {/* Threat level bar */}
@@ -115,6 +122,7 @@ export default function App() {
           {geocoding.error && !dismissedErrors.has('geo') && <ErrorBanner message={geocoding.error} section="GEO" onDismiss={() => dismiss('geo')} />}
           {weather.error && !dismissedErrors.has('weather') && <ErrorBanner message={weather.error} section="WEATHER" onDismiss={() => dismiss('weather')} />}
           {alerts.error && !dismissedErrors.has('alerts') && <ErrorBanner message={alerts.error} section="ALERTS" onDismiss={() => dismiss('alerts')} />}
+          {earthquakes.error && !dismissedErrors.has('earthquakes') && <ErrorBanner message={earthquakes.error} section="USGS" onDismiss={() => dismiss('earthquakes')} />}
 
           {/* KPI Row */}
           <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] lg:grid-cols-[repeat(5,minmax(0,1fr))] gap-2 px-2 sm:px-3 py-2 shrink-0 min-w-0 max-w-full overflow-hidden">
@@ -160,9 +168,9 @@ export default function App() {
             />
             <KPICard
               icon={List}
-              label="Live Items"
+              label="Live Feed"
               value={String(incidentItems.length)}
-              subvalue={`${alerts.alerts.length} NWS · ${localData.userReports.length} note${localData.userReports.length !== 1 ? 's' : ''}`}
+              subvalue={`${alerts.alerts.length} NWS · ${earthquakes.earthquakes.length} USGS · ${localData.userReports.length} local`}
               severity="NONE"
             />
           </div>
@@ -177,6 +185,7 @@ export default function App() {
                 <OperationalMap
                   location={geocoding.location}
                   alerts={alerts.alerts}
+                  earthquakes={earthquakes.earthquakes}
                   userReports={localData.userReports}
                 />
               </div>
@@ -185,7 +194,7 @@ export default function App() {
               <div className="h-52 sm:h-48 shrink-0">
                 <IncidentList
                   items={incidentItems}
-                  loading={alerts.loading && !incidentItems.length}
+                  loading={(alerts.loading || earthquakes.loading) && !incidentItems.length}
                   hasLocation={!!geocoding.location}
                   onAddReport={localData.addReport}
                   onDeleteReport={localData.deleteUserReport}

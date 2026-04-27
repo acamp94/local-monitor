@@ -17,12 +17,14 @@ const REPORT_CATEGORIES = [
 
 const SOURCE_CHIP: Record<string, string> = {
   NWS:     'text-cyan bg-cyan/10 border-cyan/30',
-  LOCAL:   'text-success bg-success/10 border-success/30',
+  USGS:    'text-amber bg-amber/10 border-amber/30',
+  LOCAL_NOTE: 'text-success bg-success/10 border-success/30',
 }
 
 const ROW_BORDER: Record<string, string> = {
   NWS:     'border-l-2 border-l-cyan',
-  LOCAL:   'border-l-2 border-l-success',
+  USGS:    'border-l-2 border-l-amber',
+  LOCAL_NOTE: 'border-l-2 border-l-success',
 }
 
 interface AddReportFormProps {
@@ -120,13 +122,13 @@ interface IncidentRowProps {
 }
 
 function IncidentRow({ item, onDelete }: IncidentRowProps) {
-  const isUserReport = item.source === 'LOCAL'
+  const isUserReport = item.source === 'LOCAL_NOTE'
   return (
     <div className={`px-3 py-2 hover:bg-elevated transition-colors group relative ${ROW_BORDER[item.source] ?? 'border-l-2 border-l-line'}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-          <span className={`font-mono text-[9px] font-bold tracking-wider uppercase border px-1.5 py-0.5 rounded-sm shrink-0 ${SOURCE_CHIP[item.source] ?? SOURCE_CHIP['LOCAL']}`}>
-            {item.source}
+          <span className={`font-mono text-[9px] font-bold tracking-wider uppercase border px-1.5 py-0.5 rounded-sm shrink-0 ${SOURCE_CHIP[item.source] ?? SOURCE_CHIP['LOCAL_NOTE']}`}>
+            {item.source === 'LOCAL_NOTE' ? 'LOCAL NOTE' : item.source}
           </span>
           {isUserReport && (
             <span className="font-mono text-[9px] text-success bg-success/10 border border-success/30 px-1.5 py-0.5 rounded-sm">YOU</span>
@@ -150,7 +152,9 @@ function IncidentRow({ item, onDelete }: IncidentRowProps) {
       {item.summary && (
         <div className="font-mono text-[10px] text-muted leading-snug mt-0.5 line-clamp-2">{item.summary}</div>
       )}
-      <div className="font-mono text-[9px] text-muted mt-1">{formatRelativeTime(item.timestamp)}</div>
+      <div className="font-mono text-[9px] text-muted mt-1">
+        {item.source === 'LOCAL_NOTE' ? 'Saved locally' : 'Observed'} {formatRelativeTime(item.timestamp)}
+      </div>
     </div>
   )
 }
@@ -177,7 +181,7 @@ export function IncidentList({ items, loading, hasLocation, onAddReport, onDelet
       <div className="flex items-center justify-between px-3 py-2 border-b border-line shrink-0 bg-card-header">
         <div className="flex items-center gap-2">
           <List size={13} className="text-cyan" aria-hidden="true" />
-          <span className="font-mono text-[10px] text-secondary tracking-widest uppercase">Local Intel List</span>
+          <span className="font-mono text-[10px] text-secondary tracking-widest uppercase">Live Feed</span>
           <span className="font-mono text-[9px] text-muted bg-elevated border border-line px-1.5 py-0.5 rounded-sm">
             {items.length}
           </span>
@@ -214,15 +218,15 @@ export function IncidentList({ items, loading, hasLocation, onAddReport, onDelet
         {!loading && items.length === 0 && (
           <div className="flex flex-col items-center justify-center py-6 gap-1 text-muted">
             <List size={20} className="opacity-30" aria-hidden="true" />
-            <span className="font-mono text-xs">No local intel items</span>
-            <span className="font-mono text-[10px]">{hasLocation ? 'No NWS alerts or local notes to show' : 'Enter a ZIP to load NWS alerts'}</span>
+            <span className="font-mono text-xs">No live feed items</span>
+            <span className="font-mono text-[10px]">{hasLocation ? 'No NWS alerts, USGS events, or local notes to show' : 'Enter a ZIP to load NWS and USGS feeds'}</span>
           </div>
         )}
         {!loading && items.map(item => (
           <IncidentRow
             key={item.id}
             item={item}
-            onDelete={item.source === 'LOCAL' && onDeleteReport
+            onDelete={item.source === 'LOCAL_NOTE' && onDeleteReport
               ? () => onDeleteReport(item.id)
               : undefined
             }

@@ -11,7 +11,8 @@ interface Props {
 
 const SOURCE_COLOR: Record<IntelSource, string> = {
   NWS:     'text-cyan bg-cyan/10 border-cyan/30',
-  LOCAL:   'text-success bg-success/10 border-success/30',
+  USGS:    'text-amber bg-amber/10 border-amber/30',
+  LOCAL_NOTE: 'text-success bg-success/10 border-success/30',
 }
 
 function IntelItemRow({ item }: { item: IntelItem }) {
@@ -19,7 +20,7 @@ function IntelItemRow({ item }: { item: IntelItem }) {
     <div className="px-3 py-2 hover:bg-elevated transition-colors">
       <div className="flex items-start justify-between gap-2 mb-0.5">
         <span className={`font-mono text-[8px] font-bold tracking-wider uppercase border px-1.5 py-0.5 rounded-sm shrink-0 ${SOURCE_COLOR[item.source]}`}>
-          {item.source}
+          {item.source === 'LOCAL_NOTE' ? 'LOCAL NOTE' : item.source}
         </span>
         <SeverityBadge severity={item.severity} />
       </div>
@@ -36,7 +37,7 @@ export function ActiveIntelPanel({ items, loading }: Props) {
       <div className="flex items-center justify-between p-3 border-b border-line shrink-0">
         <div className="flex items-center gap-2">
           <Radio size={13} className="text-cyan" style={{ animation: 'blink 2s ease-in-out infinite' }} />
-          <span className="font-mono text-[10px] text-secondary tracking-widest uppercase">Active Intel</span>
+          <span className="font-mono text-[10px] text-secondary tracking-widest uppercase">Live Feed</span>
         </div>
         <span className="font-mono text-[9px] text-muted bg-elevated border border-line px-1.5 py-0.5 rounded-sm">
           {items.length} ITEMS

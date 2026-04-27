@@ -52,6 +52,19 @@ export interface NWSAlert {
   geometry: AlertGeometry | null
 }
 
+export interface EarthquakeEvent {
+  id: string
+  title: string
+  place: string
+  magnitude: number | null
+  time: Date
+  updated: Date | null
+  url: string | null
+  lat: number
+  lon: number
+  depthKm: number | null
+}
+
 export type AsyncStatus = 'idle' | 'loading' | 'refreshing' | 'success' | 'error'
 
 export interface AsyncResource<T> {
@@ -66,7 +79,7 @@ export type AlertGeometry =
   | { type: 'MultiPolygon'; coordinates: number[][][][] }
 
 export type SeverityLevel = 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW' | 'NONE'
-export type IntelSource = 'NWS' | 'LOCAL'
+export type IntelSource = 'NWS' | 'USGS' | 'LOCAL_NOTE'
 
 export interface IntelItem {
   id: string

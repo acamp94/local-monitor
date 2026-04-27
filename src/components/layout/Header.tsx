@@ -11,9 +11,10 @@ interface Props {
   hasError: boolean
   weatherReady: boolean
   alertsReady: boolean
+  earthquakesReady: boolean
 }
 
-export function Header({ zip, onZipChange, location, loading, source, hasError, weatherReady, alertsReady }: Props) {
+export function Header({ zip, onZipChange, location, loading, source, hasError, weatherReady, alertsReady, earthquakesReady }: Props) {
   const [input, setInput] = useState(zip)
   const hasSubmittedZip = /^\d{5}$/.test(zip)
   const isInvalidZip = hasSubmittedZip && !location && !loading
@@ -27,8 +28,8 @@ export function Header({ zip, onZipChange, location, loading, source, hasError, 
           ? 'LOCATION READY'
           : 'ZIP NOT FOUND'
   const dataStatus = location
-    ? weatherReady && alertsReady
-      ? 'LIVE WX/NWS'
+    ? weatherReady && alertsReady && earthquakesReady
+      ? 'LIVE WX/NWS/USGS'
       : 'PARTIAL DATA'
     : 'NO AREA DATA'
 
@@ -108,7 +109,7 @@ export function Header({ zip, onZipChange, location, loading, source, hasError, 
         </div>
         <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 border border-line rounded-sm bg-elevated">
           <span
-            className={`w-1.5 h-1.5 rounded-full shrink-0 ${location && weatherReady && alertsReady ? 'bg-success' : hasError ? 'bg-amber' : 'bg-muted'}`}
+            className={`w-1.5 h-1.5 rounded-full shrink-0 ${location && weatherReady && alertsReady && earthquakesReady ? 'bg-success' : hasError ? 'bg-amber' : 'bg-muted'}`}
             style={loading ? { animation: 'blink 2s ease-in-out infinite' } : undefined}
             aria-hidden="true"
           />

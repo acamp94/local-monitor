@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { MapPin } from 'lucide-react'
 import L from 'leaflet'
 import { MapContainer, TileLayer, ZoomControl, useMap } from 'react-leaflet'
-import type { GeoLocation, NWSAlert, LocalReport, SeverityLevel } from '@/types'
+import type { EarthquakeEvent, GeoLocation, NWSAlert, LocalReport, SeverityLevel } from '@/types'
 import { DARK_TILE_URL, DARK_TILE_ATTRIBUTION, DEFAULT_ZOOM, MAX_ZOOM } from '@/data/tileLayer'
 
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
@@ -106,6 +106,47 @@ function ReportMarkers({ reports }: { reports: LocalReport[] }) {
   return null
 }
 
+function magnitudeToColor(magnitude: number | null): string {
+  if (magnitude == null) return '#64748b'
+  if (magnitude >= 6) return '#ef4444'
+  if (magnitude >= 4) return '#f59e0b'
+  if (magnitude >= 2.5) return '#eab308'
+  return '#00c8ff'
+}
+
+function EarthquakeMarkers({ earthquakes }: { earthquakes: EarthquakeEvent[] }) {
+  const map = useMap()
+  useEffect(() => {
+    const markers: L.CircleMarker[] = []
+
+    earthquakes.forEach(event => {
+      const color = magnitudeToColor(event.magnitude)
+      const radius = Math.max(5, Math.min(16, (event.magnitude ?? 1) * 2.4))
+      const marker = L.circleMarker([event.lat, event.lon], {
+        radius,
+        color,
+        fillColor: color,
+        fillOpacity: 0.45,
+        opacity: 0.95,
+        weight: 2,
+      }).bindPopup(`
+        <div style="font-family:monospace;font-size:11px;min-width:180px;">
+          <div style="color:${color};font-weight:bold;margin-bottom:4px;font-size:10px;letter-spacing:0.05em;">
+            USGS EARTHQUAKE${event.magnitude == null ? '' : ` · M ${escapeHtml(event.magnitude.toFixed(1))}`}
+          </div>
+          <div style="color:#e2e8f0;margin-bottom:4px;">${escapeHtml(event.place)}</div>
+          <div style="color:#94a3b8;font-size:10px;">${escapeHtml(event.time.toLocaleString())}</div>
+          ${event.depthKm == null ? '' : `<div style="color:#64748b;font-size:9px;margin-top:4px;">Depth: ${escapeHtml(event.depthKm.toFixed(1))} km</div>`}
+        </div>
+      `).addTo(map)
+      markers.push(marker)
+    })
+
+    return () => { markers.forEach(marker => map.removeLayer(marker)) }
+  }, [map, earthquakes])
+  return null
+}
+
 function AlertGeometryLayers({ alerts }: { alerts: NWSAlert[] }) {
   const map = useMap()
   useEffect(() => {
@@ -144,10 +185,11 @@ function AlertGeometryLayers({ alerts }: { alerts: NWSAlert[] }) {
 interface Props {
   location: GeoLocation | null
   alerts: NWSAlert[]
+  earthquakes: EarthquakeEvent[]
   userReports: LocalReport[]
 }
 
-export function OperationalMap({ location, alerts, userReports }: Props) {
+export function OperationalMap({ location, alerts, earthquakes, userReports }: Props) {
   const center: [number, number] = location ? [location.lat, location.lon] : [39.5, -98.35]
   const zoom = location ? DEFAULT_ZOOM : 4
   const mappableReports = useMemo(
@@ -173,6 +215,7 @@ export function OperationalMap({ location, alerts, userReports }: Props) {
 
         {location && <RecenterMap lat={location.lat} lon={location.lon} />}
         {location && <LocationMarker lat={location.lat} lon={location.lon} />}
+        {location && <EarthquakeMarkers earthquakes={earthquakes} />}
         {location && <ReportMarkers reports={mappableReports} />}
         {location && <AlertGeometryLayers alerts={alertsWithGeometry} />}
       </MapContainer>
@@ -205,7 +248,14 @@ export function OperationalMap({ location, alerts, userReports }: Props) {
             {mappableReports.length > 0 && (
               <div className="bg-amber/10 border border-amber/30 rounded-sm px-2 py-0.5">
                 <span className="font-mono text-[9px] text-amber">
-                  {mappableReports.length} USER NOTE{mappableReports.length !== 1 ? 'S' : ''}
+                  {mappableReports.length} LOCAL NOTE{mappableReports.length !== 1 ? 'S' : ''}
+                </span>
+              </div>
+            )}
+            {earthquakes.length > 0 && (
+              <div className="bg-cyan/10 border border-cyan/30 rounded-sm px-2 py-0.5">
+                <span className="font-mono text-[9px] text-cyan">
+                  {earthquakes.length} USGS EVENT{earthquakes.length !== 1 ? 'S' : ''}
                 </span>
               </div>
             )}

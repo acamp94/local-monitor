@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { IntelItem } from '@/types'
 import { useAlerts } from '@/hooks/useAlerts'
+import { useEarthquakes } from '@/hooks/useEarthquakes'
 import { useGeocoding } from '@/hooks/useGeocoding'
 import { useLocalData } from '@/hooks/useLocalData'
 import { useRiskIndex } from '@/hooks/useRiskIndex'
@@ -18,6 +19,7 @@ export function useDashboardData(zip: string) {
   const geocoding = useGeocoding(zip)
   const weather = useWeather(geocoding.location)
   const alerts = useAlerts(geocoding.location)
+  const earthquakes = useEarthquakes(geocoding.location)
   const localData = useLocalData()
   const riskIndex = useRiskIndex(weather.data, alerts.alerts)
 
@@ -35,18 +37,38 @@ export function useDashboardData(zip: string) {
       id: report.id,
       title: report.title,
       summary: report.body || report.category,
-      source: 'LOCAL',
+      source: 'LOCAL_NOTE',
       severity: 'MODERATE',
       timestamp: report.createdAt,
     }))
 
+    const fromEarthquakes: IntelItem[] = earthquakes.earthquakes.map(event => ({
+      id: event.id,
+      title: event.magnitude == null ? event.title : `M ${event.magnitude.toFixed(1)} - ${event.place}`,
+      summary: event.depthKm == null
+        ? 'USGS event depth unavailable'
+        : `USGS event · ${event.depthKm.toFixed(1)} km depth`,
+      source: 'USGS',
+      severity: event.magnitude == null
+        ? 'LOW'
+        : event.magnitude >= 6
+          ? 'HIGH'
+          : event.magnitude >= 4
+            ? 'MODERATE'
+            : 'LOW',
+      timestamp: event.time,
+      url: event.url ?? undefined,
+    }))
+
     return [
       ...fromAlerts,
+      ...fromEarthquakes,
       ...fromUserReports,
     ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
   }, [
     alerts.alerts,
     alerts.fetchedAt,
+    earthquakes.earthquakes,
     localData.userReports,
   ])
 
@@ -54,6 +76,7 @@ export function useDashboardData(zip: string) {
     geocoding,
     weather,
     alerts,
+    earthquakes,
     localData,
     riskIndex,
     incidentItems,
