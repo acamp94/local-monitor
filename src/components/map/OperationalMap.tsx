@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { MapPin } from 'lucide-react'
 import L from 'leaflet'
 import { MapContainer, TileLayer, ZoomControl, useMap } from 'react-leaflet'
-import type { EarthquakeEvent, GeoLocation, NWSAlert, LocalReport, SeverityLevel } from '@/types'
+import type { EarthquakeEvent, GeoLocation, NWSAlert, LocalReport, PublicSafetyIncident, SeverityLevel } from '@/types'
 import { DARK_TILE_URL, DARK_TILE_ATTRIBUTION, DEFAULT_ZOOM, MAX_ZOOM } from '@/data/tileLayer'
 
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
@@ -147,6 +147,47 @@ function EarthquakeMarkers({ earthquakes }: { earthquakes: EarthquakeEvent[] }) 
   return null
 }
 
+function publicSafetyColor(severity: SeverityLevel): string {
+  if (severity === 'CRITICAL') return '#ef4444'
+  if (severity === 'HIGH') return '#f97316'
+  if (severity === 'MODERATE') return '#eab308'
+  if (severity === 'LOW') return '#00c8ff'
+  return '#64748b'
+}
+
+function PublicSafetyMarkers({ incidents }: { incidents: PublicSafetyIncident[] }) {
+  const map = useMap()
+  useEffect(() => {
+    const markers: L.CircleMarker[] = []
+
+    incidents.forEach(incident => {
+      if (incident.lat == null || incident.lon == null) return
+      const color = publicSafetyColor(incident.severity)
+      const marker = L.circleMarker([incident.lat, incident.lon], {
+        radius: incident.severity === 'HIGH' || incident.severity === 'CRITICAL' ? 9 : 7,
+        color,
+        fillColor: color,
+        fillOpacity: 0.55,
+        opacity: 0.95,
+        weight: 2,
+      }).bindPopup(`
+        <div style="font-family:monospace;font-size:11px;min-width:190px;">
+          <div style="color:${color};font-weight:bold;margin-bottom:4px;font-size:10px;letter-spacing:0.05em;">
+            ${escapeHtml(incident.source)} · ${escapeHtml(incident.status ?? 'Observed')}
+          </div>
+          <div style="color:#e2e8f0;margin-bottom:4px;">${escapeHtml(incident.title)}</div>
+          ${incident.address ? `<div style="color:#94a3b8;font-size:10px;">${escapeHtml(incident.address)}</div>` : ''}
+          ${incident.agencyName ? `<div style="color:#64748b;font-size:9px;margin-top:4px;">${escapeHtml(incident.agencyName)}</div>` : ''}
+        </div>
+      `).addTo(map)
+      markers.push(marker)
+    })
+
+    return () => { markers.forEach(marker => map.removeLayer(marker)) }
+  }, [map, incidents])
+  return null
+}
+
 function AlertGeometryLayers({ alerts }: { alerts: NWSAlert[] }) {
   const map = useMap()
   useEffect(() => {
@@ -186,10 +227,11 @@ interface Props {
   location: GeoLocation | null
   alerts: NWSAlert[]
   earthquakes: EarthquakeEvent[]
+  publicSafetyIncidents: PublicSafetyIncident[]
   userReports: LocalReport[]
 }
 
-export function OperationalMap({ location, alerts, earthquakes, userReports }: Props) {
+export function OperationalMap({ location, alerts, earthquakes, publicSafetyIncidents, userReports }: Props) {
   const center: [number, number] = location ? [location.lat, location.lon] : [39.5, -98.35]
   const zoom = location ? DEFAULT_ZOOM : 4
   const mappableReports = useMemo(
@@ -209,53 +251,141 @@ export function OperationalMap({ location, alerts, earthquakes, userReports }: P
         </div>
       )}
 
-      <MapContainer center={center} zoom={zoom} className="w-full h-full" zoomControl={false} scrollWheelZoom>
+      <MapContainer
+        center={center}
+        zoom={zoom}
+        className="w-full h-full"
+        zoomControl={false}
+        scrollWheelZoom
+        zoomSnap={0.25}
+        zoomDelta={0.5}
+        wheelPxPerZoomLevel={80}
+      >
         <TileLayer url={DARK_TILE_URL} attribution={DARK_TILE_ATTRIBUTION} maxZoom={MAX_ZOOM} subdomains="abcd" />
         <ZoomControl position="bottomright" />
 
         {location && <RecenterMap lat={location.lat} lon={location.lon} />}
         {location && <LocationMarker lat={location.lat} lon={location.lon} />}
         {location && <EarthquakeMarkers earthquakes={earthquakes} />}
+        {location && <PublicSafetyMarkers incidents={publicSafetyIncidents} />}
         {location && <ReportMarkers reports={mappableReports} />}
         {location && <AlertGeometryLayers alerts={alertsWithGeometry} />}
       </MapContainer>
 
+      {/* Edge vignette — draws focus inward, frames the tactical display */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5,
+          background: 'radial-gradient(ellipse 90% 90% at 50% 50%, transparent 38%, rgba(4,9,18,0.55) 74%, rgba(4,9,18,0.84) 100%)',
+        }}
+      />
+
+      {/* CRT scan-line texture */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5,
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,0,0,0.038) 3px, rgba(0,0,0,0.038) 4px)',
+        }}
+      />
+
+      {/* North indicator — sits above zoom controls */}
+      <div
+        aria-label="North"
+        style={{
+          position: 'absolute', bottom: 108, right: 14,
+          zIndex: 400, pointerEvents: 'none',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+        }}
+      >
+        <div style={{
+          width: 0, height: 0,
+          borderLeft: '5px solid transparent',
+          borderRight: '5px solid transparent',
+          borderBottom: '11px solid rgba(0,200,255,0.55)',
+        }} />
+        <span style={{
+          fontFamily: 'monospace', fontSize: 9, lineHeight: 1,
+          color: 'rgba(0,200,255,0.55)', letterSpacing: '0.08em',
+        }}>N</span>
+      </div>
+
       {location && (
         <>
+          {/* Area HUD */}
           <div className="absolute top-2 left-2 z-[400] pointer-events-none">
-            <div className="bg-card/90 backdrop-blur-sm border border-line rounded-sm px-2 py-1">
-              <div className="font-mono text-[10px] text-cyan">{location.zip} · {location.city}, {location.state}</div>
-              <div className="font-mono text-[9px] text-muted">{location.lat.toFixed(4)}°N {Math.abs(location.lon).toFixed(4)}°W</div>
-              <div className="font-mono text-[8px] text-muted uppercase">SOURCE: {location.source}</div>
+            <div style={{
+              background: 'rgba(6,11,20,0.84)',
+              border: '1px solid rgba(0,200,255,0.16)',
+              borderLeft: '2px solid rgba(0,200,255,0.5)',
+              borderRadius: 3,
+              padding: '5px 8px',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+            }}>
+              <div className="font-mono text-[10px] text-cyan" style={{ letterSpacing: '0.04em' }}>
+                {location.zip} · {location.city}, {location.state}
+              </div>
+              <div className="font-mono text-[9px] text-muted">
+                {location.lat.toFixed(4)}°N {Math.abs(location.lon).toFixed(4)}°W
+              </div>
             </div>
           </div>
 
+          {/* Status badges */}
           <div className="absolute top-2 right-2 z-[400] pointer-events-none flex flex-col gap-1 items-end">
             {alerts.length > 0 && (
-              <div className="bg-danger/15 border border-danger/40 rounded-sm px-2 py-0.5">
-                <span className="font-mono text-[9px] text-danger">
-                  {alerts.length} NWS ALERT{alerts.length !== 1 ? 'S' : ''}
+              <div style={{
+                background: 'rgba(239,68,68,0.11)', border: '1px solid rgba(239,68,68,0.36)',
+                borderRadius: 3, padding: '2px 7px',
+                backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+              }}>
+                <span className="font-mono text-[9px] text-danger" style={{ letterSpacing: '0.06em' }}>
+                  ▲ {alerts.length} NWS ALERT{alerts.length !== 1 ? 'S' : ''}
                 </span>
               </div>
             )}
             {alerts.length > alertsWithGeometry.length && (
-              <div className="bg-card/90 border border-line rounded-sm px-2 py-0.5">
+              <div style={{
+                background: 'rgba(6,11,20,0.82)', border: '1px solid rgba(26,38,64,0.8)',
+                borderRadius: 3, padding: '2px 7px',
+              }}>
                 <span className="font-mono text-[8px] text-muted">
-                  {alerts.length - alertsWithGeometry.length} ALERT{alerts.length - alertsWithGeometry.length !== 1 ? 'S' : ''} WITHOUT MAP GEOMETRY
-                </span>
-              </div>
-            )}
-            {mappableReports.length > 0 && (
-              <div className="bg-amber/10 border border-amber/30 rounded-sm px-2 py-0.5">
-                <span className="font-mono text-[9px] text-amber">
-                  {mappableReports.length} LOCAL NOTE{mappableReports.length !== 1 ? 'S' : ''}
+                  {alerts.length - alertsWithGeometry.length} NO GEOMETRY
                 </span>
               </div>
             )}
             {earthquakes.length > 0 && (
-              <div className="bg-cyan/10 border border-cyan/30 rounded-sm px-2 py-0.5">
-                <span className="font-mono text-[9px] text-cyan">
-                  {earthquakes.length} USGS EVENT{earthquakes.length !== 1 ? 'S' : ''}
+              <div style={{
+                background: 'rgba(0,200,255,0.08)', border: '1px solid rgba(0,200,255,0.28)',
+                borderRadius: 3, padding: '2px 7px',
+                backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+              }}>
+                <span className="font-mono text-[9px] text-cyan" style={{ letterSpacing: '0.06em' }}>
+                  ◆ {earthquakes.length} USGS EVENT{earthquakes.length !== 1 ? 'S' : ''}
+                </span>
+              </div>
+            )}
+            {publicSafetyIncidents.length > 0 && (
+              <div style={{
+                background: 'rgba(249,115,22,0.09)', border: '1px solid rgba(249,115,22,0.3)',
+                borderRadius: 3, padding: '2px 7px',
+                backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+              }}>
+                <span className="font-mono text-[9px]" style={{ color: '#f97316', letterSpacing: '0.06em' }}>
+                  ● {publicSafetyIncidents.length} SAFETY ITEM{publicSafetyIncidents.length !== 1 ? 'S' : ''}
+                </span>
+              </div>
+            )}
+            {mappableReports.length > 0 && (
+              <div style={{
+                background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.26)',
+                borderRadius: 3, padding: '2px 7px',
+                backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+              }}>
+                <span className="font-mono text-[9px] text-amber" style={{ letterSpacing: '0.06em' }}>
+                  ■ {mappableReports.length} NOTE{mappableReports.length !== 1 ? 'S' : ''}
                 </span>
               </div>
             )}
