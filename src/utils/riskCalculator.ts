@@ -27,8 +27,8 @@ export function calcWeatherRisk(weather: WeatherData | null, alerts: NWSAlert[])
 
   if (weather_code >= 95) score += 30
   else if (weather_code >= 80) score += 15
-  else if (weather_code >= 61) score += 10
   else if (weather_code >= 71) score += 20
+  else if (weather_code >= 61) score += 10
 
   const hasExtreme = alerts.some(a => a.severity === 'Extreme')
   const hasSevere = alerts.some(a => a.severity === 'Severe')
@@ -36,7 +36,8 @@ export function calcWeatherRisk(weather: WeatherData | null, alerts: NWSAlert[])
   else if (hasSevere) score += 15
 
   score = Math.min(100, score)
-  const detail = `Wind ${Math.round(wind_speed_10m)} mph · Precip ${precipitation.toFixed(1)} mm`
+  const conditions = `Wind ${Math.round(wind_speed_10m)} mph · Precip ${precipitation.toFixed(1)} mm`
+  const detail = score === 0 ? `Normal conditions · ${conditions}` : conditions
   return { label: 'Weather Risk', score, severity: scoreToSeverity(score), detail }
 }
 
@@ -47,7 +48,9 @@ export function calcAlertRisk(alerts: NWSAlert[]): RiskMetric {
   score += Math.min(30, extremeCount * 30)
   score += Math.min(20, severeCount * 15)
   score = Math.min(100, score)
-  const detail = `${alerts.length} active alert${alerts.length !== 1 ? 's' : ''}`
+  const detail = alerts.length === 0
+    ? 'Checked: 0 active alerts'
+    : `${alerts.length} active alert${alerts.length !== 1 ? 's' : ''}`
   return { label: 'Public Alert Level', score, severity: scoreToSeverity(score), detail }
 }
 

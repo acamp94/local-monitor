@@ -58,9 +58,11 @@ export default function App() {
     weather,
     alerts,
     earthquakes,
+    publicSafety,
     localData,
     riskIndex,
     incidentItems,
+    sourceStatuses,
   } = useDashboardData(zip)
 
   const dismiss = useCallback((key: string) => {
@@ -72,12 +74,13 @@ export default function App() {
   useEffect(() => { if (weather.error) setDismissedErrors(p => { const n = new Set(p); n.delete('weather'); return n }) }, [weather.error])
   useEffect(() => { if (alerts.error) setDismissedErrors(p => { const n = new Set(p); n.delete('alerts'); return n }) }, [alerts.error])
   useEffect(() => { if (earthquakes.error) setDismissedErrors(p => { const n = new Set(p); n.delete('earthquakes'); return n }) }, [earthquakes.error])
+  useEffect(() => { if (publicSafety.error) setDismissedErrors(p => { const n = new Set(p); n.delete('publicSafety'); return n }) }, [publicSafety.error])
 
-  const hasApiError = Boolean(geocoding.error || weather.error || alerts.error || earthquakes.error)
+  const hasApiError = Boolean(geocoding.error || weather.error || alerts.error || earthquakes.error || publicSafety.error)
   const hasLiveWeather = weather.status === 'success' && Boolean(weather.data)
   const hasLiveAlerts = alerts.status === 'success'
   const hasLiveEarthquakes = earthquakes.status === 'success'
-  const lastExternalSync = [weather.fetchedAt, alerts.fetchedAt, earthquakes.fetchedAt]
+  const lastExternalSync = [weather.fetchedAt, alerts.fetchedAt, earthquakes.fetchedAt, publicSafety.fetchedAt]
     .filter((date): date is Date => date instanceof Date)
     .sort((a, b) => b.getTime() - a.getTime())[0] ?? null
   const windSeverity = weather.data
@@ -123,6 +126,7 @@ export default function App() {
           {weather.error && !dismissedErrors.has('weather') && <ErrorBanner message={weather.error} section="WEATHER" onDismiss={() => dismiss('weather')} />}
           {alerts.error && !dismissedErrors.has('alerts') && <ErrorBanner message={alerts.error} section="ALERTS" onDismiss={() => dismiss('alerts')} />}
           {earthquakes.error && !dismissedErrors.has('earthquakes') && <ErrorBanner message={earthquakes.error} section="USGS" onDismiss={() => dismiss('earthquakes')} />}
+          {publicSafety.error && !dismissedErrors.has('publicSafety') && <ErrorBanner message={publicSafety.error} section="SAFETY" onDismiss={() => dismiss('publicSafety')} />}
 
           {/* KPI Row */}
           <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] lg:grid-cols-[repeat(5,minmax(0,1fr))] gap-2 px-2 sm:px-3 py-2 shrink-0 min-w-0 max-w-full overflow-hidden">
@@ -170,7 +174,7 @@ export default function App() {
               icon={List}
               label="Live Feed"
               value={String(incidentItems.length)}
-              subvalue={`${alerts.alerts.length} NWS · ${earthquakes.earthquakes.length} USGS · ${localData.userReports.length} local`}
+              subvalue={`${alerts.alerts.length} NWS · ${publicSafety.incidents.length} safety · ${earthquakes.earthquakes.length} USGS · ${localData.userReports.length} local`}
               severity="NONE"
             />
           </div>
@@ -186,6 +190,7 @@ export default function App() {
                   location={geocoding.location}
                   alerts={alerts.alerts}
                   earthquakes={earthquakes.earthquakes}
+                  publicSafetyIncidents={publicSafety.incidents}
                   userReports={localData.userReports}
                 />
               </div>
@@ -194,8 +199,9 @@ export default function App() {
               <div className="h-52 sm:h-48 shrink-0">
                 <IncidentList
                   items={incidentItems}
-                  loading={(alerts.loading || earthquakes.loading) && !incidentItems.length}
+                  loading={(alerts.loading || earthquakes.loading || publicSafety.loading) && !incidentItems.length}
                   hasLocation={!!geocoding.location}
+                  sourceStatuses={sourceStatuses}
                   onAddReport={localData.addReport}
                   onDeleteReport={localData.deleteUserReport}
                 />

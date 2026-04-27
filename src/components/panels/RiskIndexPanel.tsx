@@ -40,6 +40,12 @@ function MetricRow({ metric }: { metric: { label: string; score: number; severit
 }
 
 export function RiskIndexPanel({ riskIndex }: Props) {
+  const compositeLabel = riskIndex.weather.detail === 'No data'
+    ? 'NO DATA'
+    : riskIndex.overall === 0
+      ? 'NORMAL'
+      : riskIndex.overallSeverity
+
   return (
     <div className="bg-card border border-line rounded-sm shrink-0 card-raised">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-line bg-card-header">
@@ -52,6 +58,7 @@ export function RiskIndexPanel({ riskIndex }: Props) {
         <div className={`font-mono text-3xl font-bold leading-none tabular-nums ${SCORE_TEXT[riskIndex.overallSeverity]}`}>
           {riskIndex.overall}
           <span className="text-[11px] text-muted font-normal ml-1">/100</span>
+          <div className="font-mono text-[9px] text-muted font-normal tracking-widest text-right mt-0.5">{compositeLabel}</div>
         </div>
       </div>
       <div className="p-3 space-y-3">

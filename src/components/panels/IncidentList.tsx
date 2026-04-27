@@ -3,7 +3,7 @@ import { List, Plus, X, Trash2, Send } from 'lucide-react'
 import { SeverityBadge } from '@/components/shared/SeverityBadge'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { formatRelativeTime } from '@/utils/formatters'
-import type { IntelItem } from '@/types'
+import type { IntelItem, SourceStatus, SourceStatusKind } from '@/types'
 
 const REPORT_CATEGORIES = [
   'Road Hazard',
@@ -18,13 +18,28 @@ const REPORT_CATEGORIES = [
 const SOURCE_CHIP: Record<string, string> = {
   NWS:     'text-cyan bg-cyan/10 border-cyan/30',
   USGS:    'text-amber bg-amber/10 border-amber/30',
+  PULSEPOINT: 'text-danger bg-danger/10 border-danger/30',
+  SOCRATA: 'text-warn bg-warn/10 border-warn/30',
+  ARCGIS: 'text-warn bg-warn/10 border-warn/30',
   LOCAL_NOTE: 'text-success bg-success/10 border-success/30',
 }
 
 const ROW_BORDER: Record<string, string> = {
   NWS:     'border-l-2 border-l-cyan',
   USGS:    'border-l-2 border-l-amber',
+  PULSEPOINT: 'border-l-2 border-l-danger',
+  SOCRATA: 'border-l-2 border-l-warn',
+  ARCGIS: 'border-l-2 border-l-warn',
   LOCAL_NOTE: 'border-l-2 border-l-success',
+}
+
+const STATUS_STYLE: Record<SourceStatusKind, string> = {
+  idle: 'text-muted bg-elevated border-line',
+  checking: 'text-cyan bg-cyan/10 border-cyan/30',
+  ok: 'text-success bg-success/10 border-success/30',
+  empty: 'text-muted bg-elevated border-line',
+  unavailable: 'text-amber bg-amber/10 border-amber/30',
+  unconfigured: 'text-muted bg-elevated border-line',
 }
 
 interface AddReportFormProps {
@@ -159,15 +174,47 @@ function IncidentRow({ item, onDelete }: IncidentRowProps) {
   )
 }
 
+function SourceStatusStrip({ statuses }: { statuses: SourceStatus[] }) {
+  if (!statuses.length) return null
+
+  return (
+    <div className="border-b border-line bg-page/50 px-3 py-2">
+      <div className="font-mono text-[9px] text-secondary tracking-widest uppercase mb-1.5">Local Coverage</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        {statuses.map(status => (
+          <div key={status.id} className={`border rounded-sm px-2 py-1 ${STATUS_STYLE[status.kind]}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-[9px] font-bold tracking-wider uppercase truncate">{status.label}</span>
+              <span className="font-mono text-[8px] tracking-wider uppercase shrink-0">{status.kind}</span>
+            </div>
+            <div className="font-mono text-[9px] leading-snug mt-0.5 opacity-90">{status.detail}</div>
+            {status.url && (
+              <a
+                href={status.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block font-mono text-[8px] text-cyan underline-offset-2 hover:underline mt-1"
+              >
+                OPEN SOURCE
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 interface Props {
   items: IntelItem[]
   loading: boolean
   hasLocation: boolean
+  sourceStatuses?: SourceStatus[]
   onAddReport: (title: string, category: string, body: string) => void
   onDeleteReport?: (id: string) => void
 }
 
-export function IncidentList({ items, loading, hasLocation, onAddReport, onDeleteReport }: Props) {
+export function IncidentList({ items, loading, hasLocation, sourceStatuses = [], onAddReport, onDeleteReport }: Props) {
   const [showForm, setShowForm] = useState(false)
 
   const handleSubmit = (title: string, category: string, body: string) => {
@@ -212,14 +259,15 @@ export function IncidentList({ items, loading, hasLocation, onAddReport, onDelet
 
       {/* List */}
       <div className="flex-1 overflow-y-auto scrollbar-thin divide-y divide-line min-h-0">
+        <SourceStatusStrip statuses={sourceStatuses} />
         {loading && (
           <div className="p-3"><LoadingSkeleton lines={5} /></div>
         )}
         {!loading && items.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-6 gap-1 text-muted">
+          <div className="flex flex-col items-center justify-center py-5 gap-1 text-muted px-3 text-center">
             <List size={20} className="opacity-30" aria-hidden="true" />
             <span className="font-mono text-xs">No live feed items</span>
-            <span className="font-mono text-[10px]">{hasLocation ? 'No NWS alerts, USGS events, or local notes to show' : 'Enter a ZIP to load NWS and USGS feeds'}</span>
+            <span className="font-mono text-[10px]">{hasLocation ? 'Sources checked. No active alerts, public-safety items, nearby USGS events, or local notes are available for this ZIP.' : 'Enter a ZIP to load local feeds'}</span>
           </div>
         )}
         {!loading && items.map(item => (

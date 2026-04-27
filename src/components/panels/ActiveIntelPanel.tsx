@@ -12,6 +12,9 @@ interface Props {
 const SOURCE_COLOR: Record<IntelSource, string> = {
   NWS:     'text-cyan bg-cyan/10 border-cyan/30',
   USGS:    'text-amber bg-amber/10 border-amber/30',
+  PULSEPOINT: 'text-danger bg-danger/10 border-danger/30',
+  SOCRATA: 'text-warn bg-warn/10 border-warn/30',
+  ARCGIS: 'text-warn bg-warn/10 border-warn/30',
   LOCAL_NOTE: 'text-success bg-success/10 border-success/30',
 }
 

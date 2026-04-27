@@ -79,7 +79,66 @@ export type AlertGeometry =
   | { type: 'MultiPolygon'; coordinates: number[][][][] }
 
 export type SeverityLevel = 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW' | 'NONE'
-export type IntelSource = 'NWS' | 'USGS' | 'LOCAL_NOTE'
+export type IntelSource = 'NWS' | 'USGS' | 'LOCAL_NOTE' | 'PULSEPOINT' | 'SOCRATA' | 'ARCGIS'
+export type SourceStatusKind = 'idle' | 'checking' | 'ok' | 'empty' | 'unavailable' | 'unconfigured'
+
+export interface SourceStatus {
+  id: string
+  label: string
+  kind: SourceStatusKind
+  detail: string
+  itemCount?: number
+  fetchedAt?: Date | null
+  url?: string
+}
+
+export interface PublicSafetyIncident {
+  id: string
+  title: string
+  category: string
+  source: Extract<IntelSource, 'PULSEPOINT' | 'SOCRATA' | 'ARCGIS'>
+  timestamp: Date
+  lat: number | null
+  lon: number | null
+  address: string | null
+  severity: SeverityLevel
+  status?: string
+  agencyName?: string
+  url?: string
+  raw: unknown
+}
+
+export interface PublicSafetySource {
+  id: string
+  label: string
+  type: 'SOCRATA' | 'ARCGIS'
+  city?: string
+  state?: string
+  enabled: boolean
+}
+
+export interface SocrataPublicSafetySource extends PublicSafetySource {
+  type: 'SOCRATA'
+  domain: string
+  datasetId: string
+  timeField: string
+  where?: string
+  titleField?: string
+  categoryField?: string
+  addressField?: string
+  latField?: string
+  lonField?: string
+}
+
+export interface ArcGISPublicSafetySource extends PublicSafetySource {
+  type: 'ARCGIS'
+  url: string
+  layerId?: number
+  timeField?: string
+  titleField?: string
+  categoryField?: string
+  addressField?: string
+}
 
 export interface IntelItem {
   id: string
